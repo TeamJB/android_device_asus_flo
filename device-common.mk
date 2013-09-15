@@ -285,6 +285,13 @@ PRODUCT_PACKAGES += \
     NfcNci \
     Tag
 
+# OpenWnn
+PRODUCT_PACKAGES += \
+    OpenWnn \
+    libWnnEngDic \
+    libWnnJpnDic \
+    libwnndict
+
 # QRNGD
 PRODUCT_PACKAGES += qrngd
 
