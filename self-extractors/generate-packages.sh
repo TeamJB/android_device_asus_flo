@@ -20,12 +20,17 @@
 # 711747 = JSR78
 # 713896 = JSR78B
 # 719009 = JSR82
+# 728843 = JSS01
+# 730471 = JSS02B
+# 739313 = JSS11D
+# 741000 = JSS11I
+# 741250 = JSS15
 # end jb-mr2-dev
 BRANCH=jb-mr2-dev
 if test $BRANCH = jb-mr2-dev
 then
-  ZIP=razor-ota-719009
-  BUILD=jsr82
+  ZIP=razor-ota-741250
+  BUILD=jss15
 fi # jb-mr2-dev
 ROOTDEVICE=flo
 DEVICE=flo
@@ -48,6 +53,7 @@ do
   broadcom)
     TO_EXTRACT="\
             system/vendor/firmware/bcm2079x-b5_firmware.ncd \
+            system/vendor/firmware/bcm2079x-b5_pre_firmware.ncd \
             "
     ;;
   qcom)
