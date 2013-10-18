@@ -21,7 +21,7 @@
 # Inherit from the common Open Source product configuration
 $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base.mk)
 # Linaro specific bits
-$(call inherit-product, device/linaro/common/common.mk)
+#$(call inherit-product, device/linaro/common/common.mk)
 
 PRODUCT_NAME := aosp_flo
 PRODUCT_DEVICE := flo
