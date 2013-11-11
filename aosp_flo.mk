@@ -33,4 +33,4 @@ $(call inherit-product, device/asus/flo/device.mk)
 $(call inherit-product-if-exists, vendor/asus/flo/device-vendor.mk)
 #$(call inherit-product-if-exists, vendor/qcom/proprietary/common/config/device-vendor.mk)
 # Linaro specific bits
-$(call inherit-product, device/linaro/common/common.mk)
+#$(call inherit-product, device/linaro/common/common.mk)
