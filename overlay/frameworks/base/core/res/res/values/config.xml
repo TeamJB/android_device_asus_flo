@@ -253,4 +253,7 @@
          The default is false. -->
     <bool name="config_lidControlsSleep">true</bool>
 
+    <!-- Disable lockscreen translucent decor by default -->
+    <bool name="config_enableLockScreenTranslucentDecor">true</bool>
+
 </resources>
