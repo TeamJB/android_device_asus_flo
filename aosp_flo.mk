@@ -23,12 +23,14 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base.mk)
 
 PRODUCT_NAME := aosp_flo
 PRODUCT_DEVICE := flo
-PRODUCT_BRAND := Android
-PRODUCT_MODEL := AOSP on Flo
-PRODUCT_MANUFACTURER := ASUS
-PRODUCT_RESTRICT_VENDOR_FILES := true
+PRODUCT_BRAND := google
+PRODUCT_MODEL := Nexus 7
+PRODUCT_MANUFACTURER := asus
+PRODUCT_RESTRICT_VENDOR_FILES := false
+
+PRODUCT_BUILD_PROP_OVERRIDES += PRODUCT_NAME=razor BUILD_FINGERPRINT=google/razor/flo:4.4.2/KOT49H/937116:user/release-keys PRIVATE_BUILD_DESC="razor-user 4.4.2 KOT49H 937116 release-keys"
 
 # Inherit from hardware-specific part of the product configuration
 $(call inherit-product, device/asus/flo/device.mk)
-$(call inherit-product-if-exists, vendor/asus/flo/device-vendor.mk)
+$(call inherit-product-if-exists, vendor/asus/flo/flo-vendor.mk)
 #$(call inherit-product-if-exists, vendor/qcom/proprietary/common/config/device-vendor.mk)
