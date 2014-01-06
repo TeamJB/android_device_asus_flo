@@ -455,7 +455,7 @@ if [ "$r" != "y" ]; then
 	[ -z "$FASTBOOT" ] && FASTBOOT=fastboot
 	echo
 	echo "Boot your Nexus 7 into bootloader mode by powering it off,"
-	echo "then holding the volume up and volume down keys at the same"
+	echo "then holding the volume down key at the same"
 	echo "time while turning the tablet on."
 	echo
 	echo "Use"
