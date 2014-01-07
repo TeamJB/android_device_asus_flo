@@ -72,7 +72,7 @@ if ! which simg2img &>/dev/null; then
 		git clone git://android.git.linaro.org/platform/external/libselinux.git || \
 			git clone http://android.git.linaro.org/platform/external/libselinux.git
 		cd libselinux/src
-		git checkout -b jb android-4.3.1_r1
+		git checkout -b jb android-4.4.2_r1
 		for i in *.c; do
 			gcc $CFLAGS -DHOST -o ${i/.c/.o} -c $i -I. -I../include -I../../core/include
 		done
@@ -80,26 +80,26 @@ if ! which simg2img &>/dev/null; then
 		ranlib libselinux.a
 		cd ../..
 		cd core
-		git checkout -b jb origin/linaro_android_4.3.1
+		git checkout -b jb origin/linaro_android_4.4.2
 		cd libsparse
 		gcc $CFLAGS -DHOST -Iinclude -o simg2img simg2img.c sparse_crc32.c sparse_read.c sparse.c sparse_err.c backed_block.c output_file.c -lz
 		cd ../../extras
-		git checkout -b jb android-4.3.1_r1
+		git checkout -b jb android-4.4.2_r1
 		cd ext4_utils
 		gcc $CFLAGS -DHOST -I../../libselinux/include -I../../core/libsparse/include -o make_ext4fs make_ext4fs_main.c make_ext4fs.c ext4fixup.c ext4_utils.c allocate.c contents.c extent.c indirect.c uuid.c crc16.c sha1.c wipe.c ../../core/libsparse/backed_block.c ../../core/libsparse/output_file.c ../../core/libsparse/sparse_read.c ../../core/libsparse/sparse.c ../../core/libsparse/sparse_err.c ../../core/libsparse/sparse_crc32.c -lz -L../../libselinux/src -Wl,-Bstatic -lselinux -Wl,-Bdynamic
 		cd ../..
 	fi
 fi
-[ -e razor-krt16s-factory-7235eb0d.tgz ] || wget https://dl.google.com/dl/android/aosp/razor-krt16s-factory-7235eb0d.tgz
-[ -d razor-krt16s ] || tar xf razor-krt16s-factory-7235eb0d.tgz
+[ -e razor-kot49h-factory-ebb4918e.tgz ] || wget https://dl.google.com/dl/android/aosp/razor-kot49h-factory-ebb4918e.tgz
+[ -d razor-kot49h ] || tar xf razor-kot49h-factory-ebb4918e.tgz
 [ -e recovery-clockwork-touch-6.0.4.3-flo.img ] || wget http://download2.clockworkmod.com/recoveries/recovery-clockwork-touch-6.0.4.3-flo.img
-cd razor-krt16s
+cd razor-kot49h
 if [ ! -e system.img ]; then
-	unzip image-razor-krt16s.zip
+	unzip image-razor-kot49h.zip
 fi
 cd ..
 simg2img "$SRC"/system.img linaro.ext4
-simg2img razor-krt16s/system.img blob.ext4
+simg2img razor-kot49h/system.img blob.ext4
 mkdir -p blob linaro system
 $SUDO mount -t ext4 -o loop,ro linaro.ext4 linaro
 $SUDO mount -t ext4 -o loop,ro blob.ext4 blob
@@ -406,14 +406,14 @@ cd tmp
 cp \
 	"$SRC"/boot.img \
 	"$SRC"/userdata.img \
-	../razor-krt16s/android-info.txt \
+	../razor-kot49h/android-info.txt \
 	./
 
 # We don't currently have a Linaro recovery system, so let's use the
 # most commonly used good one...
 cp ../recovery-clockwork-touch-6.0.4.3-flo.img \
 	recovery.img
-zip ../linaro-razor-krt16s.zip boot.img recovery.img system.img userdata.img android-info.txt
+zip ../linaro-razor-kot49h.zip boot.img recovery.img system.img userdata.img android-info.txt
 cd ..
 
 FASTBOOT="`which fastboot 2>/dev/null || :`"
@@ -460,7 +460,7 @@ if [ "$r" != "y" ]; then
 	echo
 	echo "Use"
 	echo "	$SUDO $FASTBOOT oem unlock"
-	echo "	$SUDO $FASTBOOT -w update linaro-razor-krt16s.zip"
+	echo "	$SUDO $FASTBOOT -w update linaro-razor-kot49h.zip"
 	echo "to flash the image manually. Make sure you have the current"
 	echo "boot loader and radio firmware installed first."
 	echo
@@ -480,4 +480,4 @@ echo "time while turning the tablet on."
 echo
 # Expected to fail if the device is already unlocked
 $SUDO $FASTBOOT oem unlock || :
-$SUDO $FASTBOOT -w update linaro-razor-krt16s.zip
+$SUDO $FASTBOOT -w update linaro-razor-kot49h.zip
