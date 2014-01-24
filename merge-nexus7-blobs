@@ -3,7 +3,7 @@
 # This script merges non-free binaries from Google's Nexus 7 firmware
 # into the Linaro Nexus 7 build.
 #
-# (C) 2012 Bernhard Rosenkraenzer <Bernhard.Rosenkranzer@linaro.org>
+# (C) 2012-2014 Bernhard Rosenkraenzer <Bernhard.Rosenkranzer@linaro.org>
 # Released under the Apache Software License 2.0.
 
 
@@ -71,8 +71,13 @@ if ! which simg2img &>/dev/null; then
 			git clone http://android.git.linaro.org/platform/system/core.git
 		git clone git://android.git.linaro.org/platform/external/libselinux.git || \
 			git clone http://android.git.linaro.org/platform/external/libselinux.git
+		git clone git://android.git.linaro.org/platform/external/sepolicy.git default-sepolicy || \
+			git clone http://android.git.linaro.org/platform/external/sepolicy.git default-sepolicy
+		cd default-sepolicy
+		git checkout -b kk android-4.4.2_r1
+		cd ..
 		cd libselinux/src
-		git checkout -b jb android-4.4.2_r1
+		git checkout -b kk android-4.4.2_r1
 		for i in *.c; do
 			gcc $CFLAGS -DHOST -o ${i/.c/.o} -c $i -I. -I../include -I../../core/include
 		done
@@ -80,11 +85,11 @@ if ! which simg2img &>/dev/null; then
 		ranlib libselinux.a
 		cd ../..
 		cd core
-		git checkout -b jb origin/linaro_android_4.4.2
+		git checkout -b kk origin/linaro_android_4.4.2
 		cd libsparse
 		gcc $CFLAGS -DHOST -Iinclude -o simg2img simg2img.c sparse_crc32.c sparse_read.c sparse.c sparse_err.c backed_block.c output_file.c -lz
 		cd ../../extras
-		git checkout -b jb android-4.4.2_r1
+		git checkout -b kk android-4.4.2_r1
 		cd ext4_utils
 		gcc $CFLAGS -DHOST -I../../libselinux/include -I../../core/libsparse/include -o make_ext4fs make_ext4fs_main.c make_ext4fs.c ext4fixup.c ext4_utils.c allocate.c contents.c extent.c indirect.c uuid.c crc16.c sha1.c wipe.c ../../core/libsparse/backed_block.c ../../core/libsparse/output_file.c ../../core/libsparse/sparse_read.c ../../core/libsparse/sparse.c ../../core/libsparse/sparse_err.c ../../core/libsparse/sparse_crc32.c -lz -L../../libselinux/src -Wl,-Bstatic -lselinux -Wl,-Bdynamic
 		cd ../..
@@ -106,302 +111,43 @@ $SUDO mount -t ext4 -o loop,ro blob.ext4 blob
 $SUDO rm -rf target tmp
 mkdir target
 $SUDO cp -a linaro/* target/
-[ -d /tmp/android-native-toolchain ] && $SUDO cp -a /tmp/android-native-toolchain/system/* target/
+
+# Grab a list of files that exist in the official firmware image, but not
+# in ours -- proprietary-blobs.txt is usually missing some stuff.
+cd blob
+$SUDO find . >../blob.list
+cd ../linaro
+$SUDO find . >../linaro.list
+cd ..
+cat blob.list |sort >blob.list.sorted
+cat linaro.list |sort >linaro.list.sorted
+diff -u linaro.list.sorted blob.list.sorted |grep ^+ |grep -v ^+++ |sed -e 's,^\+.,/system,' >blobs.txt
+cat proprietary-blobs.txt proprietary-blobs.txt blobs.txt |sort |uniq -u >unlisted-blobs.txt
+# Remove bits that aren't useful and/or are known to be required by Google Apps only
+# We remove:
+#	*.odex files -- because they don't match our build
+#	*.apk files -- because they contain Google Apps that should be installed
+#		through a separate installer, they need some modifications to
+#		the core system
+#	libearth* -- part of Google Earth, should be installed separately
+# TODO - there are likely some other files that are needed only for Google Apps and
+# that should be removed here.
+cat unlisted-blobs.txt |grep -vE '(\.odex|\.apk)$' |grep -v libearth >unlisted-useful-blobs.txt
+cat default-sepolicy/file_contexts sepolicy/file_contexts >secontexts
 $SUDO umount linaro
-if true; then
-	cat proprietary-blobs.txt |while read r; do
-	        echo $r |grep -q '^#' && continue
-	        echo $r |grep -q '^/system' || continue
-	        r="`echo $r |sed -e 's,^/system,,g'`"
-	        echo "Copying blob $r"
-	        [ -z "$r" ] && continue
-	        $SUDO mkdir -p `dirname target$r`
-	        $SUDO cp -a blob$r target$r
-	done
-else
-$SUDO cp -a \
-	blob/bin/ATFWD-daemon \
-	blob/bin/bridgemgrd \
-	blob/bin/btnvtool \
-	blob/bin/clear \
-	blob/bin/diag_klog \
-	blob/bin/diag_mdlog \
-	blob/bin/ds_fmc_appd \
-	blob/bin/efsks \
-	blob/bin/hci_qcomm_init \
-	blob/bin/irsc_util \
-	blob/bin/ks \
-	blob/bin/mm-qcamera-app \
-	blob/bin/mm-qcamera-daemon \
-	blob/bin/mm-qjpeg-enc-test \
-	blob/bin/mm-qomx-ienc-test \
-	blob/bin/mpdecision \
-	blob/bin/netmgrd \
-	blob/bin/nl_listener \
-	blob/bin/port-bridge \
-	blob/bin/qcks \
-	blob/bin/qmuxd \
-	blob/bin/qseecomd \
-	blob/bin/radish \
-	blob/bin/rmt_storage \
-	blob/bin/sensors.qcom \
-	blob/bin/thermald \
-	blob/bin/usbhub \
-	blob/bin/usbhub_init \
-	target/bin/
-$SUDO cp -a \
-	blob/etc/DxHDCP.cfg \
-	blob/etc/apns-conf.xml \
-	blob/etc/fmas_eq.dat \
-	blob/etc/gps.conf \
-	blob/etc/firmware \
-	target/etc/
-$SUDO cp -a \
-	blob/lib/egl/eglsubAndroid.so \
-	blob/lib/egl/libEGL_adreno.so \
-	blob/lib/egl/libGLES_android.so \
-	blob/lib/egl/libGLESv1_CM_adreno.so \
-	blob/lib/egl/libGLESv2_adreno.so \
-	blob/lib/egl/libplayback_adreno.so \
-	blob/lib/egl/libq3dtools_adreno.so \
-	target/lib/egl/
-$SUDO cp -a \
-	blob/lib/hw/gps.msm8960.so \
-	blob/lib/hw/sensors.msm8960.so \
-	target/lib/hw/
-$SUDO cp -a \
-	blob/lib/libAKM.so \
-	blob/lib/libAppDataSearch.so \
-	blob/lib/libC2D2.so \
-	blob/lib/libCommandSvc.so \
-	blob/lib/libDxHdcp.so \
-	blob/lib/libEnjemailuri.so \
-	blob/lib/libI420colorconvert.so \
-	blob/lib/libQSEEComAPI.so \
-	blob/lib/libRSSupport.so \
-	blob/lib/libWVphoneAPI.so \
-	blob/lib/lib_dic_en_USUK.conf.so \
-	blob/lib/lib_dic_ja_JP.conf.so \
-	blob/lib/lib_dic_morphem_ja_JP.conf.so \
-	blob/lib/libacdbdata.so \
-	blob/lib/libacdbloader.so \
-	blob/lib/libaudcal.so \
-	blob/lib/libaudioalsa.so \
-	blob/lib/libchromatix_ov5693_common.so \
-	blob/lib/libchromatix_ov5693_default_video.so \
-	blob/lib/libchromatix_ov5693_preview.so \
-	blob/lib/libconfigdb.so \
-	blob/lib/libcsd-client.so \
-	blob/lib/libdiag.so \
-	blob/lib/libdocsimageutils.so \
-	blob/lib/libdrmdiag.so \
-	blob/lib/libdrmfs.so \
-	blob/lib/libdrmtime.so \
-	blob/lib/libdsi_netctrl.so \
-	blob/lib/libdsprofile.so \
-	blob/lib/libdss.so \
-	blob/lib/libdsucsd.so \
-	blob/lib/libdsutils.so \
-	blob/lib/libennjcon.so \
-	blob/lib/libennjubase1.so \
-	blob/lib/libennjubase1gb.so \
-	blob/lib/libennjubase1us.so \
-	blob/lib/libennjubase2.so \
-	blob/lib/libennjubase3.so \
-	blob/lib/libennjyomi.so \
-	blob/lib/libfacelock_jni.so \
-	blob/lib/libfilterpack_facedetect.so \
-	blob/lib/libgames_rtmp_jni.so \
-	blob/lib/libgps.utils.so \
-	blob/lib/libgsl.so \
-	blob/lib/libidl.so \
-	blob/lib/libiwnn.so \
-	blob/lib/libjni_googlepinyinime_5.so \
-	blob/lib/libjni_googlepinyinime_latinime_5.so \
-	blob/lib/libjni_koreanime.so \
-	blob/lib/libjni_latinimegoogle.so \
-	blob/lib/libjni_xt9input.so \
-	blob/lib/liblightcycle.so \
-	blob/lib/libllvm-a3xx.so \
-	blob/lib/libloc_eng.so \
-	blob/lib/libmm-abl.so \
-	blob/lib/libmm-color-convertor.so \
-	blob/lib/libmmcamera2_stats_algorithm.so \
-	blob/lib/libmmcamera_image_stab.so \
-	blob/lib/libmmcamera_mi1040.so \
-	blob/lib/libmmcamera_ov5693.so \
-	blob/lib/libnetmgr.so \
-	blob/lib/liboemcrypto.so \
-	blob/lib/libpatts_engine_jni_api.so \
-	blob/lib/libqcci_legacy.so \
-	blob/lib/libqdi.so \
-	blob/lib/libqdp.so \
-	blob/lib/libqmi.so \
-	blob/lib/libqmi_cci.so \
-	blob/lib/libqmi_client_qmux.so \
-	blob/lib/libqmi_common_so.so \
-	blob/lib/libqmi_csi.so \
-	blob/lib/libqmi_csvt_srvc.so \
-	blob/lib/libqmi_encdec.so \
-	blob/lib/libqmiservices.so \
-	blob/lib/librs.antblur.so \
-	blob/lib/librs.antblur_constant.so \
-	blob/lib/librs.antblur_drama.so \
-	blob/lib/librs.drama.so \
-	blob/lib/librs.film_base.so \
-	blob/lib/librs.fixedframe.so \
-	blob/lib/librs.grey.so \
-	blob/lib/librs.image_wrapper.so \
-	blob/lib/librs.retrolux.so \
-	blob/lib/librsjni.so \
-	blob/lib/libsc-a3xx.so \
-	blob/lib/libsensor1.so \
-	blob/lib/libsensor_reg.so \
-	blob/lib/libsensor_user_cal.so \
-	blob/lib/libstagefright_hdcp.so \
-	blob/lib/libwebp_android.so \
-	blob/lib/libwebrtc_audio_coding.so \
-	blob/lib/libxml.so \
-	target/lib/
-# There's some more (probably only required for Google Apps though...)
-# that just don't fit into the filesystem fow now...
-#	blob/lib/libharfbuzz.so \
-#	blob/lib/libchromeview.so \
-#	blob/lib/libearthandroid.so \
-#	blob/lib/libearthmobile.so \
-#	blob/lib/libgtalk_jni.so \
-#	blob/lib/libgtalk_stabilize.so \
-#	blob/lib/libgoogle_recognizer_jni.so \
-#	blob/lib/libnjaddress.so \
-#	blob/lib/libnjcon.so \
-#	blob/lib/libnjemoji.so \
-#	blob/lib/libnjexyomi.so \
-#	blob/lib/libnjfzk.so \
-#	blob/lib/libnjkaomoji.so \
-#	blob/lib/libnjname.so \
-#	blob/lib/libnjtan.so \
-#	blob/lib/libnjubase1.so \
-#	blob/lib/libnjubase2.so \
-#	blob/lib/libnjubaseidx1.so \
-#	blob/lib/libnjubaseidx2.so \
-#	blob/lib/libplus_jni_v8.so \
-#	blob/lib/libspeexwrapper.so \
-#	blob/lib/libvcdecoder_jni.so \
-#	blob/lib/libvideochat_jni.so \
-#	blob/lib/libvorbisencoder.so \
-#	blob/lib/libwebcore.so \
-$SUDO cp -a blob/lib/soundfx/libfmas.so \
-	target/lib/soundfx/
-$SUDO cp -a blob/media/bootanimation.zip \
-	target/media/
-$SUDO cp -a blob/usr/keylayout \
-	target/usr/
-$SUDO cp -a blob/usr/srec \
-	target/usr/
-$SUDO cp -a blob/usr/xt9 \
-	target/usr/
-$SUDO cp -a blob/vendor/firmware/* \
-	target/vendor/firmware/
-$SUDO cp -a blob/vendor/lib/drm \
-	target/vendor/lib/
-$SUDO cp -a blob/vendor/lib/*.so \
-	target/vendor/lib/
-$SUDO cp -a blob/vendor/lib/mediadrm \
-	target/vendor/lib/
-$SUDO cp -a blob/vendor/media \
-	target/vendor/
-$SUDO cp -a blob/vendor/pittpatt \
-	target/vendor/
-fi
-# Copying off the Google apps currently doesn't work.
-# Don't enable WITH_GAPPS unless you're working on fixing it.
-if [ "$WITH_GAPPS" = "yes" ]; then
-	# FIXME
-	# Google builds also replace some APKs in /system/app - at some point, we
-	# should determine what the differences are, and whether or not it makes
-	# sense to copy over the Google versions...
-	#	Browser -> BrowserGoogle
-	#	Calendar -> CalendarGoogle
-	#	DeskClock -> DeskClockGoogle
-	#	Email -> EmailGoogle
-	#	Exchange2 -> Exchange2Google
-	#	Gallery2 -> GalleryGoogle
-	#	LatinIME -> LatinImeGoogle
-	#	Music -> Music2
-	#	Tag -> TagGoogle
-	#	VideoEditor -> VideoEditorGoogle
-	$SUDO cp -a \
-		blob/app/Books.* \
-		blob/app/ChromeBookmarksSyncAdapter.* \
-		blob/app/Currents.* \
-		blob/app/FaceLock.* \
-		blob/app/GenieWidget.* \
-		blob/app/Gmail.* \
-		blob/app/GmsCore.* \
-		blob/app/Google*.* \
-		blob/app/LatinImeDictionaryPack.* \
-		blob/app/Magazines.* \
-		blob/app/Maps.* \
-		blob/app/MediaUploader.* \
-		blob/app/NetworkLocation.* \
-		blob/app/OneTimeInitializer.* \
-		blob/app/Phonesky.* \
-		blob/app/PlusOne.* \
-		blob/app/SetupWizard.* \
-		blob/app/Stk.* \
-		blob/app/Street.* \
-		blob/app/Talk.* \
-		blob/app/Thinkfree.* \
-		blob/app/Velvet.* \
-		blob/app/Videos.* \
-		blob/app/VoiceSearchStub.* \
-		blob/app/Wallet.* \
-		blob/app/YouTube.* \
-		blob/app/talkback.* \
-		target/app/
-	$SUDO cp -a \
-		blob/etc/permissions/com.google.* \
-		blob/etc/permissions/features.xml \
-		target/etc/permissions/
-	$SUDO cp -a \
-		blob/etc/preferred-apps \
-		blob/etc/apns-conf.xml \
-		blob/etc/updatecmds \
-		target/etc/
-	$SUDO cp -a \
-		blob/etc/updatecmds/google_generic_update.txt \
-		target/etc/updatecmds/
-	if false; then
-		# With this, fails to boot to GUI
-		# Details need to be diagnosed
-		$SUDO cp -a \
-			blob/framework/com.google.* \
-			target/framework/
-	fi
-	# FIXME
-	# Some of the stuff that exists in the Google build, but not in the Linaro build,
-	# does not seem to have license issues (libvorbisencoder.so) - maybe we should just
-	# build it inside the source tree to get better performance?
-	$SUDO cp -a \
-		blob/lib/libchromeview.so \
-		blob/lib/libearthmobile.so \
-		blob/lib/libfacelock_jni.so \
-		blob/lib/libfilterpack_facedetect.so \
-		blob/lib/libfrsdk.so \
-		blob/lib/libgcomm_jni.so \
-		blob/lib/libgoogle_recognizer_jni.so \
-		blob/lib/libpatts_engine_jni_api.so \
-		blob/lib/libsecril-client.so \
-		blob/lib/libspeexwrapper.so \
-		blob/lib/libvideochat_jni.so \
-		blob/lib/libvideochat_stabilize.so \
-		blob/lib/libvoicesearch.so \
-		blob/lib/libvorbisencoder.so \
-		target/lib/
-fi
+
+cat proprietary-blobs.txt unlisted-useful-blobs.txt |while read r; do
+        echo $r |grep -q '^#' && continue
+        echo $r |grep -q '^/system' || continue
+        r="`echo $r |sed -e 's,^/system,,g'`"
+        echo "Copying blob $r"
+        [ -z "$r" ] && continue
+        $SUDO mkdir -p `dirname target$r`
+        $SUDO cp -a blob$r target$r
+done
 $SUDO umount blob
 mkdir tmp
-$SUDO "`which make_ext4fs`" -s -l 512M -a system tmp/system.img target/
+$SUDO "`which make_ext4fs`" -s -S secontexts -l 740M -a system tmp/system.img target/
 cd tmp
 cp \
 	"$SRC"/boot.img \
