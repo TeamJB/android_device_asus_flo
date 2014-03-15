@@ -3,3 +3,6 @@
 #LTE, GSM, WCDMA(9)
 #
 ro.telephony.default_network=9
+
+# UMS
+persist.sys.usb.config=mtp,adb
