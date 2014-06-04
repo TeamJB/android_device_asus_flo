@@ -5,4 +5,4 @@
 ro.telephony.default_network=9
 
 # UMS
-persist.sys.usb.config=mtp,adb
+persist.sys.usb.config=mtp
