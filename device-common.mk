@@ -210,9 +210,12 @@ PRODUCT_PACKAGES += \
         libizat_core \
         libgeofence \
         libgps.utils \
-        gps.conf \
         gps.msm8960 \
         flp.msm8960
+
+# GPS configuration
+PRODUCT_COPY_FILES += \
+    device/asus/flo/gps.conf:system/etc/gps.conf
 
 PRODUCT_PACKAGES += \
 	bdAddrLoader \
